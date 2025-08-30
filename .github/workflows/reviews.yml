@@ -1,0 +1,51 @@
+name: Collect Reviews
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "17 1 * * *"  # daily at 01:17 UTC
+
+permissions:
+  contents: read
+
+env:
+  GP_APP_ID: com.tonik.mobile
+  GP_COUNTRY: ph
+  GP_LANG: en
+  GP_MAX_REVIEWS: "1500"
+  GP_APP_QUERY: Tonik Online Loans
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SERVICE_ROLE_KEY: ${{ secrets.SERVICE_ROLE_KEY }}
+
+jobs:
+  google-play:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Google Play collector
+        run: |
+          python collectors/google_play_collect.py
+
+  app-store:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invoke Supabase App Store collector (Edge Function)
+        run: |
+          curl -sS -X POST \
+            -H "Authorization: Bearer ${{ secrets.SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            "https://edoxpbhrcyetfpuadxdo.functions.supabase.co/collect_reviews"
+
+
